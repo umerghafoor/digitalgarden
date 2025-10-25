@@ -1,5 +1,5 @@
 ---
-{"dg-publish":true,"permalink":"/ros-2-notes/ros-2-notes/"}
+{"dg-publish":true,"permalink":"/ros-2-notes/ros-2-notes/","title":" ROS-2 notes"}
 ---
 
 
