@@ -1,0 +1,28 @@
+{
+  "name": "digital-garden",
+  "version": "1.0.0",
+  "description": "A beautiful digital garden built with Next.js and Markdown",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "gray-matter": "^4.0.3",
+    "marked": "^11.1.1",
+    "next-mdx-remote": "^5.0.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.31",
+    "autoprefixer": "^10.4.16",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18"
+  }
+}
