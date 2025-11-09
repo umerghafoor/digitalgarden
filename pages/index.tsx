@@ -1,70 +1,142 @@
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
-import { marked } from 'marked'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { buildNoteTree, getFolderStats, TreeNode } from '@/lib/noteTree'
+import GraphNodeVisualizer from '@/components/GraphNodeVisualizer'
 
 interface Note {
   slug: string
   title: string
   excerpt: string
-  date?: string
+  date: string | null
 }
 
-export default function Home({ notes }: { notes: Note[] }) {
+interface HomeProps {
+  notes: Note[]
+  tree: TreeNode[]
+  stats: { folders: number; files: number }
+}
+
+export default function Home({ notes, tree, stats }: HomeProps) {
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  useEffect(() => {
+    // Check system preference or stored preference
+    const stored = localStorage.getItem('theme')
+    const isDark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+    setIsDarkMode(isDark)
+    applyTheme(isDark)
+  }, [])
+
+  const applyTheme = (dark: boolean) => {
+    if (dark) {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
+  }
+
+  const toggleTheme = () => {
+    const newMode = !isDarkMode
+    setIsDarkMode(newMode)
+    applyTheme(newMode)
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <>
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">🌱 Digital Garden</h1>
-          <p className="text-gray-600 mt-2">A collection of my thoughts and notes</p>
+      <header className="header">
+        <div className="header-container">
+          <Link href="/" className="logo">
+            🌱 Digital <span>Garden</span>
+          </Link>
+          <nav style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center' }}>
+            <button className="theme-toggle" onClick={toggleTheme} title="Toggle dark mode">
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
+          </nav>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {notes.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No notes found yet. Start adding some!</p>
+      {/* Hero Section */}
+      <main className="container-main">
+        <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-2xl)' }}>
+          <h1 className="section-title">🌱 Umer Ghafoor's Digital Garden</h1>
+          <p className="section-subtitle">A curated collection of thoughts, notes, and explorations in technology, philosophy, and personal growth</p>
+        </div>
+
+        {/* Stats Section */}
+        <div className="stats-grid" style={{ marginBottom: 'var(--spacing-2xl)' }}>
+          <div className="stat-card">
+            <div className="stat-number">{notes.length}</div>
+            <div className="stat-label">Total Notes</div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {notes.map((note) => (
-              <Link
-                key={note.slug}
-                href={`/notes/${note.slug}`}
-                className="group"
-              >
-                <div className="h-full bg-white rounded-lg shadow hover:shadow-lg transition-shadow duration-300 p-6 cursor-pointer transform hover:scale-105 transition-transform duration-300">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                    {note.title}
-                  </h2>
+          <div className="stat-card">
+            <div className="stat-number">{stats.folders}</div>
+            <div className="stat-label">Folders</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-number">{stats.files}</div>
+            <div className="stat-label">Files</div>
+          </div>
+        </div>
+
+        {/* Notes Grid Section */}
+        {notes.length > 0 && (
+          <>
+            <h2 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, marginBottom: 'var(--spacing-lg)', color: 'var(--text-primary)' }}>
+              📚 Latest Notes
+            </h2>
+            <div className="notes-grid">
+              {notes.slice(0, 6).map((note) => (
+                <Link key={note.slug} href={`/notes/${note.slug}`} className="note-card">
+                  <h3 className="note-card-title">{note.title}</h3>
                   {note.date && (
-                    <p className="text-xs text-gray-400 mb-3">{note.date}</p>
+                    <div className="note-card-date">
+                      📅 {new Date(note.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
                   )}
-                  <p className="text-gray-600 line-clamp-3 text-sm">
-                    {note.excerpt || 'No description available'}
-                  </p>
-                  <div className="mt-4 text-blue-600 text-sm font-medium group-hover:text-blue-800">
-                    Read more →
+                  <p className="note-card-excerpt">{note.excerpt || 'No description available'}</p>
+                  <div className="note-card-footer">
+                    <span className="note-card-link">Read more →</span>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Tree View */}
+        {tree.length > 0 && (
+          <div className="notes-tree">
+            <h2 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, marginBottom: 'var(--spacing-lg)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+              🧠 Your Knowledge Graph
+            </h2>
+            <GraphNodeVisualizer tree={tree} stats={stats} />
+          </div>
+        )}
+
+        {/* No Notes Message */}
+        {notes.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 'var(--spacing-2xl)' }}>
+            <p style={{ fontSize: 'var(--fs-lg)', color: 'var(--text-secondary)' }}>
+              No notes found yet. Start adding some markdown files to <code>src/site/notes/</code>
+            </p>
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-gray-600 text-center">
-            Made with 💚 • Your Digital Garden
-          </p>
-        </div>
+      <footer className="footer">
+        <p>💚 Umer Ghafoor's Digital Garden</p>
+        <p style={{ fontSize: 'var(--fs-sm)', marginTop: 'var(--spacing-sm)', opacity: 0.7 }}>
+          Exploring Robotics, IoT, Philosophy & Knowledge Management | © 2025 All notes are mine to share. Keep growing!
+        </p>
       </footer>
-    </div>
+    </>
   )
 }
 
@@ -97,7 +169,7 @@ export async function getStaticProps() {
           slug,
           title: data.title || file.name.replace('.md', ''),
           excerpt: content.substring(0, 150).replace(/[#*`_\[\]]/g, '').trim(),
-            date: data.date ? data.date : (data.created ? data.created : null),
+          date: data.date ? data.date : (data.created ? data.created : null),
         })
       }
     })
@@ -115,8 +187,12 @@ export async function getStaticProps() {
     return 0
   })
 
+  // Build tree structure
+  const tree = buildNoteTree(notes)
+  const stats = getFolderStats(tree)
+
   return {
-    props: { notes },
+    props: { notes, tree, stats },
     revalidate: 3600, // Revalidate every hour
   }
 }

@@ -4,6 +4,7 @@ import matter from 'gray-matter'
 import { marked } from 'marked'
 import Link from 'next/link'
 import Head from 'next/head'
+import { useState, useEffect } from 'react'
 
 interface NotePageProps {
   title: string
@@ -13,6 +14,31 @@ interface NotePageProps {
 }
 
 export default function NotePage({ title, content, slug, date }: NotePageProps) {
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  useEffect(() => {
+    // Check system preference or stored preference
+    const stored = localStorage.getItem('theme')
+    const isDark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+    setIsDarkMode(isDark)
+    applyTheme(isDark)
+  }, [])
+
+  const applyTheme = (dark: boolean) => {
+    if (dark) {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
+  }
+
+  const toggleTheme = () => {
+    const newMode = !isDarkMode
+    setIsDarkMode(newMode)
+    applyTheme(newMode)
+  }
+
   // Extract folder path for breadcrumbs
   const breadcrumbs = slug.split('/').filter(Boolean)
 
@@ -23,67 +49,71 @@ export default function NotePage({ title, content, slug, date }: NotePageProps) 
         <meta name="description" content={title} />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* Header */}
-        <header className="bg-white shadow-sm sticky top-0 z-50">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <Link href="/" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
-              ← Back to Garden
-            </Link>
-          </div>
-        </header>
+      {/* Header */}
+      <header className="header">
+        <div className="header-container">
+          <Link href="/" className="logo">
+            🌱 Digital <span>Garden</span>
+          </Link>
+          <nav style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center' }}>
+            <button className="theme-toggle" onClick={toggleTheme} title="Toggle dark mode">
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
+          </nav>
+        </div>
+      </header>
 
-        {/* Main Content */}
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <article className="bg-white rounded-lg shadow-lg p-8 md:p-12">
-            {/* Breadcrumbs */}
-            {breadcrumbs.length > 1 && (
-              <nav className="mb-6 pb-6 border-b border-gray-200">
-                <ol className="flex flex-wrap gap-2 text-sm text-gray-600">
-                  <li>
-                    <Link href="/" className="hover:text-blue-600">
-                      Home
-                    </Link>
+      {/* Main Content */}
+      <main className="container-main">
+        <article style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border-color)', padding: 'var(--spacing-2xl)', boxShadow: 'var(--shadow-md)' }}>
+          {/* Back Link */}
+          <Link href="/" style={{ color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-lg)', textDecoration: 'none', transition: 'color var(--transition-fast)' }} onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-secondary)')} onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--accent-primary)')}>
+            ← Back to Garden
+          </Link>
+
+          {/* Breadcrumbs */}
+          {breadcrumbs.length > 1 && (
+            <nav style={{ marginBottom: 'var(--spacing-lg)', paddingBottom: 'var(--spacing-lg)', borderBottom: '1px solid var(--border-color)' }}>
+              <ol style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-sm)', fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', listStyle: 'none', padding: 0, margin: 0 }}>
+                <li>
+                  <Link href="/" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>
+                    Home
+                  </Link>
+                </li>
+                {breadcrumbs.slice(0, -1).map((crumb, idx) => (
+                  <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                    <span>/</span>
+                    <span style={{ textTransform: 'capitalize' }}>{crumb}</span>
                   </li>
-                  {breadcrumbs.slice(0, -1).map((crumb, idx) => (
-                    <li key={idx} className="flex items-center gap-2">
-                      <span>/</span>
-                      <span className="capitalize">{crumb}</span>
-                    </li>
-                  ))}
-                </ol>
-              </nav>
-            )}
+                ))}
+              </ol>
+            </nav>
+          )}
 
-            {/* Title */}
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              {title}
-            </h1>
+          {/* Title */}
+          <h1 style={{ fontSize: 'var(--fs-4xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--spacing-lg)', lineHeight: 1.2 }}>
+            {title}
+          </h1>
 
-            {/* Date */}
-            {date && (
-              <p className="text-gray-500 text-sm mb-8">
-                Published on {new Date(date).toLocaleDateString()}
-              </p>
-            )}
-
-            {/* Content */}
-            <div
-              className="markdown-content prose prose-lg max-w-none"
-              dangerouslySetInnerHTML={{ __html: content }}
-            />
-          </article>
-        </main>
-
-        {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 mt-12">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <p className="text-gray-600 text-center">
-              Made with 💚 • Your Digital Garden
+          {/* Date */}
+          {date && (
+            <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--fs-sm)', marginBottom: 'var(--spacing-2xl)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+              📅 Published on {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
-          </div>
-        </footer>
-      </div>
+          )}
+
+          {/* Content */}
+          <div className="markdown-content" style={{ color: 'var(--text-primary)' }} dangerouslySetInnerHTML={{ __html: content }} />
+        </article>
+      </main>
+
+      {/* Footer */}
+      <footer className="footer">
+        <p>💚 Umer Ghafoor's Digital Garden</p>
+        <p style={{ fontSize: 'var(--fs-sm)', marginTop: 'var(--spacing-sm)', opacity: 0.7 }}>
+          Exploring Robotics, IoT, Philosophy & Knowledge Management | © 2025
+        </p>
+      </footer>
     </>
   )
 }
